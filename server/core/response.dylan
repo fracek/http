@@ -61,7 +61,8 @@ define open primary class <response> (<string-stream>, <base-http-response>)
   // True if the headers have been sent.
   slot headers-sent? :: <boolean> = #f;
 
-//  slot trailers-sent?
+  constant slot headers :: <stretchy-vector>,
+    init-keyword: headers:;
 
 end class <response>;
 
@@ -157,6 +158,24 @@ end method send-response-line;
 
 // Exported
 //
+define method set-header-internal
+    (headers :: <stretchy-vector>, header :: <byte-string>, value :: <object>,
+     #key if-exists? = #"replace")
+  block (return)
+    let length :: <integer> = size(headers);
+    assert(even?(length),
+           "This headers do not have even length");
+    for (i :: <integer> from 0 below length by 2)
+      when (headers[i] = header)
+        headers[i + 1] := value;
+        return(headers)
+      end;
+    finally
+      return(concatenate!(headers, vector(header, value)));
+    end
+  end
+end method set-header-internal;
+
 define method set-header
     (response :: <response>, header :: <byte-string>, value :: <object>,
      #key if-exists? = #"replace")
@@ -176,9 +195,9 @@ define method set-header
       // doesn't allow a Content-Length header.
       response-chunked?(response) := #f;
     end;
-    next-method()
+    set-header-internal(response.headers, header, value);
   else
-    next-method()
+    set-header-internal(response.headers, header, value);
   end;
 end method set-header;
 
@@ -204,10 +223,10 @@ define method send-headers
     set-header(response, "Server", *server*.server-header);
     set-header(response, "Date", as-rfc1123-string(current-date()));
 
-    let headers :: <header-table> = raw-headers(response);
-    for (val keyed-by name in headers)
-      send-header(socket, name, val);
-    end;
+    let headers = headers(response);
+    for (i :: <integer> from 0 below size(headers) by 2)
+      send-header(socket, headers[i], headers[i + 1]);
+    end for;
     write(socket, "\r\n");  // blank line separates headers from body
     headers-sent?(response) := #t;
   end;

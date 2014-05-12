@@ -698,13 +698,13 @@ define function %respond-top-level
                                               decline-if-debugging: #f);
 
             read-request(request);
-            let headers = make(<header-table>);
-            if (request.request-keep-alive?)
-              set-header(headers, "Connection", "Keep-Alive");
-            end if;
+            let headers = make(<stretchy-vector>, capacity: 10 * 2);
             let response = make(<response>,
                                 request: request,
                                 headers: headers);
+            if (request.request-keep-alive?)
+              set-header(response, "Connection", "Keep-Alive");
+            end if;
             dynamic-bind (*response* = response,
                           // Bound to a <page-context> when first requested.
                           *page-context* = #f)
@@ -811,7 +811,7 @@ end function send-error-response;
 
 define method send-error-response-internal
     (request :: <request>, err :: <error>)
-  let headers = http-error-headers(err) | make(<header-table>);
+  let headers = http-error-headers(err) | make(<stretchy-vector>);
   let response = make(<response>,
                       request: request,
                       headers: headers);

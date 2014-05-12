@@ -13,7 +13,7 @@ define variable *max-single-header-size* :: false-or(<integer>) = 16384;
 // amount of copying the whole header around -- Hannes 16.11.2007
 define variable *header-buffer-growth-amount* :: limited(<integer>, min: 1) = 1024;
 
-define abstract class <message-headers-mixin> (<object>)
+define abstract open class <message-headers-mixin> (<object>)
   // Raw headers, mapping case-insensitive-header-name to unparsed header value.
   constant slot raw-headers :: <header-table>,
     init-keyword: headers:,
